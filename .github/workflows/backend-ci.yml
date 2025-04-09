@@ -1,51 +1,54 @@
 # .github/workflows/backend-ci.yml
 name: Backend CI Pipeline
 
-# Define when this workflow should run
 on:
-  # Trigger on pushes to the develop branch, but only if backend files changed
   push:
     branches: [ develop ]
     paths:
       - 'backend/**'
       - '.github/workflows/backend-ci.yml'
-
-  # Trigger on Pull Requests targeting develop or main, only if backend files changed
   pull_request:
     branches: [ develop, main ]
     paths:
       - 'backend/**'
       - '.github/workflows/backend-ci.yml'
-
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-# Define the jobs to run in the workflow
 jobs:
-  # Define a job named 'build-and-test'
   build-and-test:
     name: Build and Test Backend
-    # Specify the type of virtual machine to run the job on
     runs-on: ubuntu-latest
 
-    # Define the sequence of steps within the job
     steps:
-    # Step 1: Checkout code from the repository
     - name: Checkout code
-      uses: actions/checkout@v4 # Use a standard action to get your code
+      uses: actions/checkout@v4
 
-    # Step 2: Set up the Java environment needed for Spring Boot
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
-        java-version: '17'       # Match your project's Java version
-        distribution: 'temurin'  # Adoptium Temurin is a common choice
-        cache: 'maven'           # Cache Maven dependencies (change to 'gradle' if needed)
+        java-version: '17'
+        distribution: 'temurin'
+        # IMPORTANT: Ensure cache points to the correct build tool!
+        cache: 'maven' # Use 'gradle' if you generated a Gradle project
 
-    # Step 3: Placeholder - Actual build command comes later
-    - name: Placeholder - Build Project
-      run: echo "Build command (e.g., mvn package) will go here"
+    # --- MODIFIED STEP ---
+    - name: Build with Maven
+      # -B runs in non-interactive (batch) mode
+      # --file points explicitly to the pom.xml inside the backend directory
+      run: mvn -B package --file backend/pom.xml
+      # If using Gradle: run: ./gradlew build -p backend
 
-    # Step 4: Placeholder - Actual test command comes later
-    - name: Placeholder - Run Tests
-      run: echo "Test command (e.g., mvn test) will go here"
+    # --- MODIFIED STEP ---
+    - name: Run Unit Tests with Maven
+      # This command specifically runs tests. Often included in 'package',
+      # but running explicitly can sometimes provide clearer test results/reports.
+      run: mvn -B test --file backend/pom.xml
+      # If using Gradle: run: ./gradlew test -p backend
+
+    # --- Placeholder for SonarQube Scan (Add later) ---
+    # - name: SonarQube Scan
+    #   run: echo "SonarQube step would run here..."
+
+    # --- Placeholder for Docker Build & Push (Add later) ---
+    # - name: Build and Push Docker Image
+    #   run: echo "Docker build and push step would run here..."

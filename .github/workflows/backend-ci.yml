@@ -1,54 +1,60 @@
 # .github/workflows/backend-ci.yml
-name: Backend CI Pipeline
+name: Backend CI & SonarCloud Analysis
 
 on:
   push:
-    branches: [ develop ]
-    paths:
+    branches: [ develop ] # Your integration branch
+    paths: # Only trigger if relevant files change
       - 'backend/**'
       - '.github/workflows/backend-ci.yml'
   pull_request:
-    branches: [ develop, main ]
-    paths:
+    branches: [ develop, main ] # PRs targeting your main branches
+    types: [opened, synchronize, reopened] # Types recommended by SonarCloud
+    paths: # Only trigger if relevant files change
       - 'backend/**'
       - '.github/workflows/backend-ci.yml'
-  workflow_dispatch:
+  workflow_dispatch: # Allow manual trigger
 
 jobs:
-  build-and-test:
-    name: Build and Test Backend
+  build-analyze-sonar: # Consistent job name
+    name: Build, Test and Analyze Backend
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # SonarCloud recommendation for analysis relevancy
 
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
-        java-version: '17'
-        distribution: 'temurin'
-        # IMPORTANT: Ensure cache points to the correct build tool!
-        cache: 'maven' # Use 'gradle' if you generated a Gradle project
+        java-version: 17
+        distribution: 'temurin' # Keep temurin as previously configured
 
-    # --- MODIFIED STEP ---
-    - name: Build with Maven
-      # -B runs in non-interactive (batch) mode
-      # --file points explicitly to the pom.xml inside the backend directory
-      run: mvn -B package --file backend/pom.xml
-      # If using Gradle: run: ./gradlew build -p backend
+    # Use SonarCloud recommended caching strategy
+    - name: Cache SonarCloud packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.sonar/cache
+        key: ${{ runner.os }}-sonar
+        restore-keys: ${{ runner.os }}-sonar
 
-    # --- MODIFIED STEP ---
-    - name: Run Unit Tests with Maven
-      # This command specifically runs tests. Often included in 'package',
-      # but running explicitly can sometimes provide clearer test results/reports.
-      run: mvn -B test --file backend/pom.xml
-      # If using Gradle: run: ./gradlew test -p backend
+    - name: Cache Maven packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2/repository # Correct path for default Maven repo
+        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+        restore-keys: ${{ runner.os }}-m2
 
-    # --- Placeholder for SonarQube Scan (Add later) ---
-    # - name: SonarQube Scan
-    #   run: echo "SonarQube step would run here..."
-
-    # --- Placeholder for Docker Build & Push (Add later) ---
-    # - name: Build and Push Docker Image
-    #   run: echo "Docker build and push step would run here..."
+    - name: Build, Test and Analyze with SonarCloud
+      env:
+        # Secret from GitHub repository settings
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        # Required for SonarCloud pull request decoration
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Run verify (runs tests/JaCoCo) then Sonar plugin goal
+      # Explicitly point to backend pom.xml
+      # Use exact project key from SonarCloud
+      # Explicitly define scanner version (good practice, match pom.xml)
+      run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:3.11.0.3922:sonar -Dsonar.projectKey=iamsjeevan_unicampus --file backend/pom.xml

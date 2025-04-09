@@ -1,38 +1,37 @@
 # .github/workflows/backend-ci.yml
-name: Backend CI & SonarCloud Analysis
+name: Backend CI, Analysis & Docker Build
 
 on:
   push:
-    branches: [ develop ] # Your integration branch
-    paths: # Only trigger if relevant files change
+    branches: [ develop ]
+    paths:
       - 'backend/**'
       - '.github/workflows/backend-ci.yml'
   pull_request:
-    branches: [ develop, main ] # PRs targeting your main branches
-    types: [opened, synchronize, reopened] # Types recommended by SonarCloud
-    paths: # Only trigger if relevant files change
+    branches: [ develop, main ]
+    types: [opened, synchronize, reopened]
+    paths:
       - 'backend/**'
       - '.github/workflows/backend-ci.yml'
-  workflow_dispatch: # Allow manual trigger
+  workflow_dispatch:
 
 jobs:
-  build-analyze-sonar: # Consistent job name
-    name: Build, Test and Analyze Backend
+  build-analyze-build-image: # Updated job ID for clarity
+    name: Build, Test, Analyze Backend & Build Docker Image
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
-        fetch-depth: 0 # SonarCloud recommendation for analysis relevancy
+        fetch-depth: 0
 
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
         java-version: 17
-        distribution: 'temurin' # Keep temurin as previously configured
+        distribution: 'temurin'
 
-    # Use SonarCloud recommended caching strategy
     - name: Cache SonarCloud packages
       uses: actions/cache@v4
       with:
@@ -43,18 +42,32 @@ jobs:
     - name: Cache Maven packages
       uses: actions/cache@v4
       with:
-        path: ~/.m2/repository # Correct path for default Maven repo
+        path: ~/.m2/repository
         key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
         restore-keys: ${{ runner.os }}-m2
 
     - name: Build, Test and Analyze with SonarCloud
       env:
-        # Secret from GitHub repository settings
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        # Required for SonarCloud pull request decoration
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      # Run verify (runs tests/JaCoCo) then Sonar plugin goal
-      # Explicitly point to backend pom.xml
-      # Use exact project key from SonarCloud
-      # Explicitly define scanner version (good practice, match pom.xml)
       run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:3.11.0.3922:sonar -Dsonar.projectKey=iamsjeevan_unicampus --file backend/pom.xml
+
+    # --- Improved Docker Build Steps ---
+    - name: Set up Docker Buildx
+      # Sets up Docker Buildx which allows advanced features like multi-platform builds and better caching
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker image (without pushing yet)
+      # Uses the official Docker build-push action, but only performs the build part
+      uses: docker/build-push-action@v5
+      with:
+        # Context is the root of the repo, Dockerfile is specified relative to context
+        context: .
+        file: ./backend/Dockerfile
+        # Do not push the image in this CI step (push: false is default)
+        # push: false
+        # Tag the image with a unique build identifier
+        tags: unicampus-backend:ci-build-${{ github.run_id }}
+        # Enable Docker layer caching for faster builds on subsequent runs
+        cache-from: type=gha
+        cache-to: type=gha,mode=max

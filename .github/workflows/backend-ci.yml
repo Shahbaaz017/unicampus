@@ -1,0 +1,51 @@
+# .github/workflows/backend-ci.yml
+name: Backend CI Pipeline
+
+# Define when this workflow should run
+on:
+  # Trigger on pushes to the develop branch, but only if backend files changed
+  push:
+    branches: [ develop ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+
+  # Trigger on Pull Requests targeting develop or main, only if backend files changed
+  pull_request:
+    branches: [ develop, main ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# Define the jobs to run in the workflow
+jobs:
+  # Define a job named 'build-and-test'
+  build-and-test:
+    name: Build and Test Backend
+    # Specify the type of virtual machine to run the job on
+    runs-on: ubuntu-latest
+
+    # Define the sequence of steps within the job
+    steps:
+    # Step 1: Checkout code from the repository
+    - name: Checkout code
+      uses: actions/checkout@v4 # Use a standard action to get your code
+
+    # Step 2: Set up the Java environment needed for Spring Boot
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'       # Match your project's Java version
+        distribution: 'temurin'  # Adoptium Temurin is a common choice
+        cache: 'maven'           # Cache Maven dependencies (change to 'gradle' if needed)
+
+    # Step 3: Placeholder - Actual build command comes later
+    - name: Placeholder - Build Project
+      run: echo "Build command (e.g., mvn package) will go here"
+
+    # Step 4: Placeholder - Actual test command comes later
+    - name: Placeholder - Run Tests
+      run: echo "Test command (e.g., mvn test) will go here"

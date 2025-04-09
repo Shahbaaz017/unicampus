@@ -7,11 +7,11 @@ FROM eclipse-temurin:17-jre-jammy
 WORKDIR /app
 
 # Argument to specify the JAR file path (Maven default)
-ARG JAR_FILE=target/*.jar
+# ARG JAR_FILE=target/*.jar # We won't use this directly anymore
 
-# Copy the packaged application JAR file
-# This relies on the build context being set correctly in the CI workflow
-COPY ${JAR_FILE} app.jar
+# --- MODIFIED LINE ---
+# Copy the JAR file using a path relative to the build context (repo root)
+COPY backend/target/*.jar app.jar
 
 # Make port 8080 available (Default Spring Boot port)
 EXPOSE 8080

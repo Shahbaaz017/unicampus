@@ -1,7 +1,8 @@
 # .github/workflows/backend-ci.yml
-name: Backend CI, Analysis & Docker Build
+name: Backend CI, Analysis & Docker Build/Push
 
 on:
+  # ... (on triggers remain the same) ...
   push:
     branches: [ develop ]
     paths:
@@ -16,11 +17,18 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-analyze-build-image: # Updated job ID for clarity
-    name: Build, Test, Analyze Backend & Build Docker Image
+  build-analyze-push-image: # Updated job ID
+    name: Build, Test, Analyze Backend & Push Docker Image
     runs-on: ubuntu-latest
 
+    # --- NEW: Permissions for GHCR ---
+    # Need write permission for packages to push to GHCR
+    permissions:
+      contents: read
+      packages: write # Add this permission
+
     steps:
+    # ... (Checkout, Set up JDK, Caching, Build/Test/Analyze steps remain the same) ...
     - name: Checkout code
       uses: actions/checkout@v4
       with:
@@ -52,22 +60,31 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:3.11.0.3922:sonar -Dsonar.projectKey=iamsjeevan_unicampus --file backend/pom.xml
 
-    # --- Improved Docker Build Steps ---
+    # --- NEW STEP: Log in to GHCR ---
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        # GITHUB_TOKEN has permission to push to repo's GHCR automatically
+        username: ${{ github.actor }} # Your GitHub username
+        password: ${{ secrets.GITHUB_TOKEN }}
+
     - name: Set up Docker Buildx
-      # Sets up Docker Buildx which allows advanced features like multi-platform builds and better caching
       uses: docker/setup-buildx-action@v3
 
-    - name: Build Docker image (without pushing yet)
-      # Uses the official Docker build-push action, but only performs the build part
+    # --- MODIFIED STEP: Build and Push Docker image ---
+    - name: Build and push Docker image to GHCR
       uses: docker/build-push-action@v5
       with:
-        # Context is the root of the repo, Dockerfile is specified relative to context
         context: .
         file: ./backend/Dockerfile
-        # Do not push the image in this CI step (push: false is default)
-        # push: false
-        # Tag the image with a unique build identifier
-        tags: unicampus-backend:ci-build-${{ github.run_id }}
-        # Enable Docker layer caching for faster builds on subsequent runs
+        # Enable push to registry
+        push: true
+        # Define tags for GHCR: latest and unique Git SHA
+        # OWNER should be lowercase, REPO_NAME should be lowercase
+        tags: |
+          ghcr.io/${{ github.repository_owner }}/unicampus:latest
+          ghcr.io/${{ github.repository_owner }}/unicampus:${{ github.sha }}
+        # Enable Docker layer caching
         cache-from: type=gha
         cache-to: type=gha,mode=max

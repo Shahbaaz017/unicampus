@@ -77,7 +77,7 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: .
-        file: ./backend/Dockerfile
+        file: ./backend
         # Enable push to registry
         push: true
         # Define tags for GHCR: latest and unique Git SHA

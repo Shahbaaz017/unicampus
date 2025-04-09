@@ -2,7 +2,6 @@
 name: Backend CI, Analysis & Docker Build/Push
 
 on:
-  # ... (on triggers remain the same) ...
   push:
     branches: [ develop ]
     paths:
@@ -21,18 +20,16 @@ jobs:
     name: Build, Test, Analyze Backend & Push Docker Image
     runs-on: ubuntu-latest
 
-    # --- NEW: Permissions for GHCR ---
-    # Need write permission for packages to push to GHCR
+    # Permissions for GHCR push
     permissions:
       contents: read
-      packages: write # Add this permission
+      packages: write
 
     steps:
-    # ... (Checkout, Set up JDK, Caching, Build/Test/Analyze steps remain the same) ...
     - name: Checkout code
       uses: actions/checkout@v4
       with:
-        fetch-depth: 0
+        fetch-depth: 0 # For SonarCloud PR analysis
 
     - name: Set up JDK 17
       uses: actions/setup-java@v4
@@ -40,6 +37,7 @@ jobs:
         java-version: 17
         distribution: 'temurin'
 
+    # SonarCloud Recommended Caching
     - name: Cache SonarCloud packages
       uses: actions/cache@v4
       with:
@@ -60,31 +58,27 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:3.11.0.3922:sonar -Dsonar.projectKey=iamsjeevan_unicampus --file backend/pom.xml
 
-    # --- NEW STEP: Log in to GHCR ---
+    # Docker Login & Build/Push Steps
     - name: Log in to GitHub Container Registry
       uses: docker/login-action@v3
       with:
         registry: ghcr.io
-        # GITHUB_TOKEN has permission to push to repo's GHCR automatically
-        username: ${{ github.actor }} # Your GitHub username
+        username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
-    # --- MODIFIED STEP: Build and Push Docker image ---
     - name: Build and push Docker image to GHCR
       uses: docker/build-push-action@v5
       with:
+        # Use repo root as context
         context: .
-        file: ./backend
-        # Enable push to registry
+        # Point to Dockerfile within backend directory
+        file: ./backend/Dockerfile
         push: true
-        # Define tags for GHCR: latest and unique Git SHA
-        # OWNER should be lowercase, REPO_NAME should be lowercase
         tags: |
           ghcr.io/${{ github.repository_owner }}/unicampus:latest
           ghcr.io/${{ github.repository_owner }}/unicampus:${{ github.sha }}
-        # Enable Docker layer caching
         cache-from: type=gha
         cache-to: type=gha,mode=max

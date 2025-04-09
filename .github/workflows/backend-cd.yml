@@ -1,0 +1,69 @@
+# .github/workflows/backend-cd.yml
+name: Deploy Backend to Staging
+
+on:
+  # Option 1: Trigger manually via Actions tab (Safest to start)
+  workflow_dispatch:
+    inputs:
+      # Optional: Define inputs if needed, e.g., image tag to deploy
+      # image_tag:
+      #   description: 'Image tag to deploy (default: latest)'
+      #   required: false
+      #   default: 'latest'
+      pass:
+
+  # Option 2: Trigger after successful CI run on develop branch (Enable later)
+  # workflow_run:
+  #   workflows: ["Backend CI, Analysis & Docker Build/Push"] # Name of your CI workflow
+  #   types:
+  #     - completed
+  #   branches: [ develop ]
+
+jobs:
+  deploy:
+    name: Deploy to Staging Server
+    runs-on: ubuntu-latest
+
+    # Only run this job if the triggering workflow (if using workflow_run) was successful
+    # if: ${{ github.event.workflow_run.conclusion == 'success' && github.ref == 'refs/heads/develop' }} # Enable if using workflow_run trigger
+
+    steps:
+    - name: Checkout code
+      # Need repo code to access Ansible files
+      uses: actions/checkout@v4
+
+    # --- Placeholder: Get Target Server Info ---
+    # In a real scenario, you might get server IP/DNS from Terraform output,
+    # an external inventory source, or have it in GitHub secrets/variables.
+    - name: Set up target host (Placeholder)
+      run: |
+        echo "TARGET_HOST=1.2.3.4" >> $GITHUB_ENV # Replace with actual server IP/DNS later
+        echo "Target host set to ${{ env.TARGET_HOST }}"
+
+    # --- Placeholder: Configure SSH Access ---
+    # This step would typically fetch an SSH private key from GitHub Secrets
+    # and configure it for Ansible to use.
+    - name: Configure SSH Key (Placeholder)
+      run: |
+        echo "Simulating SSH key setup..."
+        # Example using secrets (DO NOT RUN THIS LITERALLY NOW):
+        # mkdir -p ~/.ssh/
+        # echo "${{ secrets.STAGING_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa_staging
+        # chmod 600 ~/.ssh/id_rsa_staging
+        # echo "SSH key configured."
+      # env:
+      #   STAGING_SSH_PRIVATE_KEY: ${{ secrets.STAGING_SSH_PRIVATE_KEY }} # Secret must exist
+
+    # --- Placeholder: Run Ansible Playbook ---
+    - name: Run Ansible Playbook (Placeholder)
+      run: |
+        echo "Would run Ansible playbook now..."
+        echo "Target: ${{ env.TARGET_HOST }}"
+        # Example command using secrets/variables (DO NOT RUN LITERALLY NOW):
+        # ansible-playbook infrastructure/ansible/playbook.yml \
+        #   -i "${{ env.TARGET_HOST }}," \ # Pass inventory dynamically
+        #   --private-key=~/.ssh/id_rsa_staging \
+        #   -u ubuntu \ # Example user
+        #   -e "ghcr_owner=${{ github.repository_owner }}" # Pass owner variable
+        #   # Potentially pass specific image tag: -e "image_tag=${{ github.event.inputs.image_tag || 'latest' }}"
+      # working-directory: ./infrastructure/ansible # Could set working dir

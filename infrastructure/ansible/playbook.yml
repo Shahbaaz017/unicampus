@@ -1,0 +1,15 @@
+# infrastructure/ansible/playbook.yml
+---
+- name: Deploy Unicampus Backend Application
+  hosts: webservers # Target hosts group defined in inventory.ini
+  gather_facts: yes # Gather information about the target system
+  become: false # Playbook itself doesn't need sudo, tasks might use become:true
+
+  # Define variables used by the role tasks
+  vars:
+    # IMPORTANT: Replace with your actual GitHub username/org (LOWERCASE)
+    ghcr_owner: "iamsjeevan" # Example value - CHANGE THIS!
+
+  # Define the roles to be executed on the hosts
+  roles:
+    - role: backend_app # Name matches the role directory name

@@ -1,0 +1,60 @@
+# .gitignore
+
+# IDE / OS Files / Codespaces
+.idea/
+*.iml
+.vscode/
+*.DS_Store
+Thumbs.db
+.codespaces/
+.devcontainer/
+
+# Java / Maven / Gradle (for Backend)
+backend/target/
+backend/.settings/
+backend/.classpath
+backend/.project
+backend/build/
+backend/out/
+backend/*.log
+*.jar
+*.war
+
+# Node / React Native (for Frontend)
+frontend/node_modules/
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/build/
+frontend/android/
+frontend/ios/
+frontend/.expo/
+frontend/.yarn/
+frontend/web-build/
+frontend/app.json # Often contains sensitive keys, check if needed
+
+# Secrets (NEVER COMMIT THESE)
+*.env
+secrets/
+secret.*
+application*.yml
+application*.yaml
+application*.properties
+# Be careful with application properties/yml - commit base config, but ignore overrides/secrets
+
+# Log files
+logs/
+*.log
+
+# Other common ignores
+coverage/
+dist/
+tmp/
+
+# Packer files
+packer_cache/
+*.box
+packer-build-*
+
+# Ansible temporary files
+*.retry

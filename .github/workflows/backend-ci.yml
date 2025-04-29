@@ -39,7 +39,7 @@ jobs:
       env:
         FIREBASE_SA_B64: ${{ secrets.FIREBASE_SA_B64 }} # For SonarCloud PR analysis
 
-    - name: Set up JDK 17
+    - name: Set up JDK 171
       uses: actions/setup-java@v4
       with:
         java-version: 17

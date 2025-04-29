@@ -27,7 +27,7 @@ public class FirebaseConfig {
     // --- UPDATED VALUE ---
     // Reference the key file created by the devcontainer postCreateCommand
     // Use "file:" prefix and the exact filename relative to workspace root
-    @Value("${firebase.service-account.key-path:file:/workspaces/unicampus/firebase-service-account.json}")
+    @Value("${firebase.service-account.key-path:file:./firebase-service-account.json}")
     private String keyPath;
 
     public FirebaseConfig(ResourceLoader resourceLoader) {

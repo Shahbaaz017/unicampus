@@ -1,42 +1,86 @@
 // backend/src/main/java/com/unicampus/backend/service/NoteService.java
-package com.unicampus.backend.service; // Service package
+package com.unicampus.backend.service;
 
-import com.unicampus.backend.model.Note; // Import the Note model
-import org.springframework.stereotype.Service; // Mark this as a Spring Service bean
+import com.unicampus.backend.model.Note;
+import com.google.api.core.ApiFuture; // Import ApiFuture
+import com.google.cloud.firestore.CollectionReference; // Import CollectionReference
+import com.google.cloud.firestore.DocumentReference; // Import DocumentReference
+import com.google.cloud.firestore.Firestore;       // Import Firestore
+import com.google.cloud.firestore.QueryDocumentSnapshot; // Import QueryDocumentSnapshot
+import com.google.cloud.firestore.QuerySnapshot;   // Import QuerySnapshot
+import com.google.cloud.firestore.WriteResult;    // Import WriteResult
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired; // Import Autowired
+import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
+import java.util.concurrent.ExecutionException; // Import ExecutionException
 
-@Service // Tells Spring to manage this class as a singleton bean
+@Service
 public class NoteService {
 
-    // In-memory list to store notes (TEMPORARY - Replace with Firebase later)
-    private final List<Note> notes = new ArrayList<>();
+    private static final Logger logger = LoggerFactory.getLogger(NoteService.class);
+    private static final String NOTES_COLLECTION = "notes"; // Firestore collection name
 
-    // Constructor to add some initial mock data (TEMPORARY)
-    public NoteService() {
-        notes.add(new Note(UUID.randomUUID().toString(), "Chapter 1: Introduction", "CS101", "Prof. Smith", "/downloads/cs101_ch1.pdf"));
-        notes.add(new Note(UUID.randomUUID().toString(), "Lecture 5 Slides", "MA201", "Prof. Jones", "/downloads/ma201_lec5.ppt"));
-        notes.add(new Note(UUID.randomUUID().toString(), "Lab Manual", "PH102", "Lab Assistant", "/downloads/ph102_lab.pdf"));
+    private final Firestore firestore; // Inject Firestore bean
+
+    @Autowired // Constructor injection for Firestore
+    public NoteService(Firestore firestore) {
+        this.firestore = firestore;
+        logger.info("NoteService initialized with Firestore instance.");
     }
 
-    // Method to retrieve all notes
-    public List<Note> getAllNotes() {
-        // In a real app, this would fetch from Firebase/Database
-        return new ArrayList<>(notes); // Return a copy to prevent external modification
-    }
+    // --- REMOVE OLD IN-MEMORY LIST AND CONSTRUCTOR ---
+    // private final List<Note> notes = new ArrayList<>();
+    // public NoteService() { ... }
 
-    // Method to add a new note (We'll use this later for the POST endpoint)
-    public Note addNote(Note note) {
-        // Assign a unique ID if one isn't provided (simple approach)
-        if (note.getId() == null || note.getId().isEmpty()) {
-            note.setId(UUID.randomUUID().toString());
+    // Method to retrieve all notes from Firestore
+    public List<Note> getAllNotes() throws ExecutionException, InterruptedException {
+        logger.debug("Fetching all notes from Firestore collection '{}'", NOTES_COLLECTION);
+        List<Note> noteList = new ArrayList<>();
+        CollectionReference notesCollection = firestore.collection(NOTES_COLLECTION);
+
+        // Asynchronously retrieve all documents
+        ApiFuture<QuerySnapshot> future = notesCollection.get();
+        // future.get() blocks until the operation completes
+        List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+
+        for (QueryDocumentSnapshot document : documents) {
+            // Convert each Firestore document back into a Note object
+            Note note = document.toObject(Note.class);
+            // Firestore automatically maps fields if names match
+            // Set the ID from the document ID
+            note.setId(document.getId());
+            noteList.add(note);
         }
-        // In a real app, this would save to Firebase/Database
-        notes.add(note);
+        logger.info("Retrieved {} notes from Firestore.", noteList.size());
+        return noteList;
+    }
+
+    // Method to add a new note to Firestore
+    public Note addNote(Note note) throws ExecutionException, InterruptedException {
+        logger.debug("Adding new note to Firestore collection '{}'", NOTES_COLLECTION);
+        CollectionReference notesCollection = firestore.collection(NOTES_COLLECTION);
+
+        // Let Firestore generate the document ID
+        ApiFuture<DocumentReference> future = notesCollection.add(note);
+        // Note: The 'note' object passed to add() should NOT have the ID set here
+
+        // Get the reference to the newly created document (blocks until complete)
+        DocumentReference addedDocRef = future.get();
+        logger.info("Note added to Firestore with ID: {}", addedDocRef.getId());
+
+        // Set the generated ID back onto the Note object before returning
+        note.setId(addedDocRef.getId());
         return note;
     }
 
-    // Add methods for getNoteById, updateNote, deleteNote later...
+    // --- TODO LATER: Implement methods for getNoteById, updateNote, deleteNote ---
+    /*
+    public Note getNoteById(String id) throws ExecutionException, InterruptedException { ... }
+    public Note updateNote(String id, Note note) throws ExecutionException, InterruptedException { ... }
+    public void deleteNote(String id) throws ExecutionException, InterruptedException { ... }
+    */
 }

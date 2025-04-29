@@ -25,7 +25,7 @@ public class FirebaseConfig {
     private final ResourceLoader resourceLoader; // Use ResourceLoader
 
     // Default path relative to 'backend' directory (where CI writes it)
-    @Value("${firebase.service-account.key-path:file:./firebase-service-account.json}")
+    @Value("${firebase.service-account.key-path:file:./backend/firebase-service-account.json}")
     private String keyPath;
 
     // Inject ResourceLoader

@@ -1,6 +1,7 @@
 // backend/src/main/java/com/unicampus/backend/config/FirebaseConfig.java
 package com.unicampus.backend.config;
 
+// ... (Imports: GoogleCredentials, FirebaseApp, FirebaseOptions, FirestoreClient, Firestore, PostConstruct, Logger, LoggerFactory, Value, Bean, Configuration, Resource, ResourceLoader, InputStream) ...
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
@@ -14,22 +15,20 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
-import org.springframework.beans.factory.annotation.Value;
-
 import java.io.InputStream;
+
 
 @Configuration
 public class FirebaseConfig {
 
     private static final Logger logger = LoggerFactory.getLogger(FirebaseConfig.class);
-    private final ResourceLoader resourceLoader;
+    private final ResourceLoader resourceLoader; // Use ResourceLoader
 
-    // --- UPDATED VALUE ---
-    // Reference the key file created by the devcontainer postCreateCommand
-    // Use "file:" prefix and the exact filename relative to workspace root
+    // Default path relative to 'backend' directory (where CI writes it)
     @Value("${firebase.service-account.key-path:file:./firebase-service-account.json}")
     private String keyPath;
 
+    // Inject ResourceLoader
     public FirebaseConfig(ResourceLoader resourceLoader) {
         this.resourceLoader = resourceLoader;
     }
@@ -40,38 +39,46 @@ public class FirebaseConfig {
             if (FirebaseApp.getApps().isEmpty()) {
                 logger.info("Initializing Firebase Admin SDK using key path: {}", keyPath);
 
-                Resource resource = resourceLoader.getResource(keyPath);
+                Resource resource = resourceLoader.getResource(keyPath); // Use ResourceLoader
                 if (!resource.exists()) {
                      logger.error("Firebase service account key file NOT FOUND at specified path: {}", keyPath);
-                     throw new RuntimeException("Firebase key file not found: " + keyPath);
+                     // Fail fast if key isn't found where expected
+                     throw new RuntimeException("Firebase key file not found at: " + keyPath + ". Check path and CI/devcontainer setup.");
                 }
-                logger.info("Found Firebase key file at: {}", resource.getURL()); // Log found path
-                InputStream serviceAccount = resource.getInputStream();
+                logger.info("Found Firebase key file resource: {}", resource); // Log resource info
 
-                FirebaseOptions options = FirebaseOptions.builder()
+                try (InputStream serviceAccount = resource.getInputStream()) { // Use try-with-resources
+                    if (serviceAccount.available() <= 0) {
+                        logger.error("Firebase service account key file appears to be empty at: {}", keyPath);
+                        throw new RuntimeException("Firebase key file is empty at: " + keyPath);
+                    }
+
+                    FirebaseOptions options = FirebaseOptions.builder()
                         .setCredentials(GoogleCredentials.fromStream(serviceAccount))
                         .build();
 
-                FirebaseApp.initializeApp(options);
-                logger.info("Firebase Admin SDK initialized successfully.");
+                    FirebaseApp.initializeApp(options);
+                    logger.info("Firebase Admin SDK initialized successfully.");
+                }
             } else {
                 logger.info("Firebase Admin SDK already initialized.");
             }
         } catch (Exception e) {
-            logger.error("Error initializing Firebase Admin SDK", e);
+            // Log the detailed exception
+            logger.error("FATAL: Error initializing Firebase Admin SDK. Path: {}, Error: {}", keyPath, e.getMessage(), e);
+            // Rethrow or handle as critical startup failure
+             throw new RuntimeException("Failed to initialize Firebase Admin SDK. See logs for details.", e);
         }
     }
 
     @Bean
     public Firestore firestore() {
          if (FirebaseApp.getApps().isEmpty()) {
-             logger.warn("Firebase not initialized yet when requesting Firestore bean!");
-             // Optionally initialize here again, or rely on PostConstruct ordering
-             // initializeFirebase(); // Be careful about potential race conditions/double init
-             // Alternatively, throw an exception or return null, depending on desired behavior
-             return null; // Or throw IllegalStateException
+             // This indicates a serious initialization problem if reached
+             logger.error("CRITICAL: Attempted to get Firestore bean, but FirebaseApp is not initialized!");
+             throw new IllegalStateException("FirebaseApp not initialized. Cannot provide Firestore bean.");
          }
-         logger.info("Providing Firestore bean instance.");
+         logger.debug("Providing Firestore bean instance.");
          return FirestoreClient.getFirestore();
     }
 }

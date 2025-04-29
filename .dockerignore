@@ -1,0 +1,11 @@
+# .dockerignore
+.git
+.gitignore
+.devcontainer/
+
+# Exclude the key file itself from the context sent to Docker daemon
+# (It gets created by CI 'decode' step before 'docker build' uses it)
+backend/firebase-service-account.json
+
+# Add other ignores if needed (e.g., target/, node_modules/)
+backend/target/

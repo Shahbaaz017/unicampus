@@ -58,3 +58,4 @@ packer-build-*
 
 # Ansible temporary files
 *.retry
+backend/firebase-service-account.json

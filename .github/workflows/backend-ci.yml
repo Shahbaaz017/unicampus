@@ -16,11 +16,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-analyze-push-image: # Updated job ID
+  build-analyze-push-image:
     name: Build, Test, Analyze Backend & Push Docker Image
     runs-on: ubuntu-latest
-
-    # Permissions for GHCR push
     permissions:
       contents: read
       packages: write
@@ -30,22 +28,24 @@ jobs:
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
-        # Add this step right after checkout
+
+    # This step creates backend/firebase-service-account.json needed by Docker COPY
     - name: Decode Firebase SA JSON
       run: |
         echo "Decoding Firebase key into backend directory..."
         echo "${{ secrets.FIREBASE_SA_B64 }}" | base64 --decode > backend/firebase-service-account.json
         echo "Key file created in backend directory."
+        # Add validation
+        if [ ! -s backend/firebase-service-account.json ]; then echo "ERROR: Decoded key file missing or empty!"; exit 1; fi
       env:
-        FIREBASE_SA_B64: ${{ secrets.FIREBASE_SA_B64 }} # For SonarCloud PR analysis
+        FIREBASE_SA_B64: ${{ secrets.FIREBASE_SA_B64 }}
 
-    - name: Set up JDK 171
+    - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
         java-version: 17
         distribution: 'temurin'
 
-    # SonarCloud Recommended Caching
     - name: Cache SonarCloud packages
       uses: actions/cache@v4
       with:
@@ -60,13 +60,14 @@ jobs:
         key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
         restore-keys: ${{ runner.os }}-m2
 
+    # This step uses the key file created by the Decode step for tests
     - name: Build, Test and Analyze with SonarCloud
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:3.11.0.3922:sonar -Dsonar.projectKey=iamsjeevan_unicampus --file backend/pom.xml
 
-    # Docker Login & Build/Push Steps
+    # Docker steps
     - name: Log in to GitHub Container Registry
       uses: docker/login-action@v3
       with:
@@ -77,13 +78,12 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
+    # This step copies backend/firebase-service-account.json into /app/firebase-key.json
     - name: Build and push Docker image to GHCR
       uses: docker/build-push-action@v5
       with:
-        # Use repo root as context
         context: .
-        # Point to Dockerfile within backend directory
-        file: ./backend/Dockerfile
+        file: ./backend/Dockerfile # Contains COPY backend/firebase... /app/firebase...
         push: true
         tags: |
           ghcr.io/${{ github.repository_owner }}/unicampus:latest

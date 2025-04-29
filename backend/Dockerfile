@@ -6,12 +6,15 @@ FROM eclipse-temurin:17-jre-jammy
 # Set the working directory inside the container
 WORKDIR /app
 
-# Argument to specify the JAR file path (Maven default)
-# ARG JAR_FILE=target/*.jar # We won't use this directly anymore
+# --- NEW LINE: Copy the decoded key file into the image ---
+# This assumes the key file exists at backend/firebase-service-account.json
+# in the build context BEFORE docker build runs (created by CI Decode step)
+COPY backend/firebase-service-account.json /app/firebase-key.json
 
-# --- MODIFIED LINE ---
-# Copy the JAR file using a path relative to the build context (repo root)
-COPY backend/target/*.jar app.jar
+# Argument for the application JAR (still useful)
+ARG JAR_FILE=target/*.jar
+# Copy the application JAR relative to the WORKDIR
+COPY ${JAR_FILE} app.jar
 
 # Make port 8080 available (Default Spring Boot port)
 EXPOSE 8080

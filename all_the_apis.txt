@@ -1,1 +1,62 @@
-
+1. signup
+http://localhost:8080/api/auth/signup
+json 
+{
+    "name":"jeevan",
+    "email":"jeevan@gmail.com",
+    "password":"Jeevan@123"    
+}
+2. login
+http://localhost:8080/api/auth/login
+json
+{
+    "email":"jeevan@gmail.com",
+    "password":"Jeevan@123" 
+}
+response
+{
+    "accessToken": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJqZWV2YW5AZ21haWwuY29tIiwiaWF0IjoxNzQ3MjIxNzY2LCJleHAiOjE3NDczMDgxNjZ9.S0N2tdVB6yLb8lTER8Qkb3eBJdUk-UhidwknAcJTZYI",
+    "tokenType": "Bearer",
+    "userId": "jeevan@gmail.com",
+    "email": "jeevan@gmail.com",
+    "name": "jeevan",
+    "roles": [
+        "ROLE_USER"
+    ]
+}
+3. get all notes
+get request
+http://localhost:8080/api/notes
+4. post note
+post request
+http://localhost:8080/api/notes
+json body
+{
+    "title":"testing notebook",
+    "subject":"test",
+    "uploadedBy":"JeevanTest",
+    "downloadUrl": "/files/test/test.pdf"
+}
+response
+{
+    "id": "qgqp2kj1ff8LNd4PNLrG",
+    "title": "testing notebook",
+    "subject": "test",
+    "uploadedBy": "JeevanTest",
+    "downloadUrl": "/files/test/test.pdf"
+}
+5. get notes by id (get requuest)
+http://localhost:8080/api/notes/qgqp2kj1ff8LNd4PNLrG
+6. get info about user
+http://localhost:8080/api/users/me
+response 
+{
+    "id": "jeevan@gmail.com",
+    "username": "jeevan@gmail.com",
+    "email": "jeevan@gmail.com",
+    "name": "jeevan",
+    "roles": [
+        "ROLE_USER"
+    ],
+    "enabled": true
+}
